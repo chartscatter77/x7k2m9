@@ -251,13 +251,22 @@ function passOppFilter(p){
   return true;
 }
 
+// Chapter 3 filter: 'all' | 'built' | 'notbuilt'
+var ch3Filter = 'all';
+function passCh3Filter(p){
+  if(ch3Filter==='all') return true;
+  if(ch3Filter==='built')    return (p.built>0);   // anything with built area = built/active
+  if(ch3Filter==='notbuilt') return (p.built<=0);  // nothing built yet
+  return true;
+}
+
 function buildTraces(ch){
   const traces=[];
   if(ch.color==='built-ring'){
     // colour by type, but built plots get a thick green ring
     LU_ORDER.forEach(function(lu){
       if(hiddenCats[lu]) return;
-      var g=data.filter(p=>p.lu===lu);
+      var g=data.filter(p=>p.lu===lu).filter(passCh3Filter);
       if(!g.length) return;
       var faded = (isolatedCat!=null && lu!==isolatedCat);
       traces.push({
@@ -337,14 +346,40 @@ function buildTraces(ch){
 
 function buildOppFilterBar(ch){
   const bar=document.getElementById('oppFilterBar');
-  if(ch.dim!=='built'){ bar.style.display='none'; document.getElementById('plotList').style.display='none'; return; }
+  var isCh4 = (ch.dim==='built');
+  var isCh3 = (ch.color==='built-ring');
+  if(!isCh4 && !isCh3){ bar.style.display='none'; document.getElementById('plotList').style.display='none'; return; }
   bar.style.display='flex';
-  // counts
+
+  var opts;
+  if(isCh3){
+    // Chapter 3: built vs not-built-yet
+    var nBuiltC3    = data.filter(function(p){return p.built>0;}).length;
+    var nNotBuiltC3 = data.filter(function(p){return p.built<=0;}).length;
+    opts=[
+      ['all','All plots',data.length,'#5a6b7c'],
+      ['built','Built & active',nBuiltC3,'#1a9850'],
+      ['notbuilt','Not built yet',nNotBuiltC3,'#9aa7b4']
+    ];
+    bar.innerHTML='<span style="font-size:11px;color:#8a97a4;align-self:center;margin-right:2px;">Show:</span>';
+    opts.forEach(function(o){
+      var active = ch3Filter===o[0];
+      var b=document.createElement('button');
+      b.style.cssText='padding:5px 11px;border-radius:14px;border:1px solid '+(active?o[3]:'#d2dae2')+';background:'+(active?o[3]:'#fff')+';color:'+(active?'#fff':'#44515e')+';cursor:pointer;font-size:11.5px;';
+      b.innerHTML=o[1]+' <b>('+o[2]+')</b>';
+      b.onclick=function(){ ch3Filter = (ch3Filter===o[0] && o[0]!=='all') ? 'all' : o[0]; render(); };
+      bar.appendChild(b);
+    });
+    buildPlotList();
+    return;
+  }
+
+  // Chapter 4: opportunity types
   var nNew  = data.filter(function(p){return p.rem>0 && p.built<=0;}).length;
   var nGrow = data.filter(function(p){return p.rem>0 && p.built>0;}).length;
   var nBuilt= data.filter(function(p){return p.rem<=0;}).length;
   var nAll  = data.length;
-  var opts=[
+  opts=[
     ['all','All plots',nAll,'#5a6b7c'],
     ['new','New Development',nNew,'#1565C0'],
     ['grow','Room to Grow',nGrow,'#00B89C'],
@@ -365,8 +400,50 @@ function buildOppFilterBar(ch){
 function buildPlotList(){
   const box=document.getElementById('plotList');
   const ch=chapters[activeChapter];
-  // show in Chapter 4 for ANY filter (including 'all')
-  if(ch.dim!=='built'){ box.style.display='none'; return; }
+  var isCh4 = (ch.dim==='built');
+  var isCh3 = (ch.color==='built-ring');
+  if(!isCh4 && !isCh3){ box.style.display='none'; return; }
+
+  // Chapter 3 list
+  if(isCh3){
+    var list3=data.filter(passCh3Filter).slice();
+    list3.sort(function(a,b){ return (b.built||0) - (a.built||0) || b.gfa - a.gfa; });
+    var lbl3={ 'all':'All plots', 'built':'Built & active', 'notbuilt':'Not built yet' };
+    var html3='<div style="font-size:12.5px;font-weight:700;color:#44515e;margin-bottom:8px;border-top:1px solid #eef2f6;padding-top:12px;">'+
+             lbl3[ch3Filter]+' &mdash; '+list3.length+' plots <span style="font-weight:400;color:#9aa7b4;">(click a row to find it)</span></div>';
+    html3+='<div id="plotListInner" style="max-height:230px;overflow-y:auto;border:1px solid #eef2f6;border-radius:8px;">';
+    list3.forEach(function(p,i){
+      var built = (p.built||0)>0;
+      var accent = built ? '#1a9850' : '#c4ccd4';
+      var metric = built ? (Number(p.built).toLocaleString()+' m² built') : 'not built yet';
+      var isSel = (highlightId!=null && String(p.id)===String(highlightId));
+      html3+='<div class="plotRow" data-id="'+p.id+'" style="display:flex;align-items:center;gap:10px;padding:7px 11px;'+
+            (isSel?'background:#fff4d6;':(i%2?'background:#fafbfc;':''))+'border-left:3px solid '+accent+';font-size:12px;cursor:pointer;">'+
+            '<span style="color:#aab4be;font-size:10.5px;white-space:nowrap;min-width:62px;font-family:monospace;">'+p.id+'</span>'+
+            '<span style="flex:1 1 auto;color:#1a2b3c;">'+p.desc+'</span>'+
+            '<span style="color:#8a97a4;font-size:11px;white-space:nowrap;">'+p.lu+'</span>'+
+            '<span style="color:'+(built?'#1a9850':'#9aa7b4')+';font-weight:600;font-size:11px;white-space:nowrap;min-width:110px;text-align:right;">'+metric+'</span>'+
+            '</div>';
+    });
+    html3+='</div>';
+    box.innerHTML=html3;
+    box.style.display='block';
+    Array.prototype.forEach.call(box.querySelectorAll('.plotRow'), function(row){
+      row.onclick=function(){
+        var id=row.getAttribute('data-id');
+        highlightId = (String(highlightId)===String(id)) ? null : id;
+        render();
+        if(highlightId!=null){
+          var p=data.filter(function(x){return String(x.id)===String(highlightId);})[0];
+          if(p) showPopup([p.id,p.desc,p.pa,p.built,p.rem,p.far,p.lu,p.gfa,p.sec,p.val], null);
+        }
+      };
+    });
+    if(highlightId!=null){ var s3=box.querySelector('.plotRow[data-id="'+highlightId+'"]'); if(s3) s3.scrollIntoView({block:'nearest'}); }
+    return;
+  }
+
+  // Chapter 4 list (opportunity)
   var list=data.filter(passOppFilter).slice();
   // sort by how much can be built (biggest opportunity first)
   list.sort(function(a,b){ return b.gfa - a.gfa; });
