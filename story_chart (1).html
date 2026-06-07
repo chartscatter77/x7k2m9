@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>Chart</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #1a2b3c; padding: 20px; max-width: 1120px; margin: 0 auto; }
+  .title { font-size: 23px; font-weight: 800; color: #003a70; margin-bottom: 6px; }
+  .intro { font-size: 14px; color: #5a6b7c; margin-bottom: 18px; line-height: 1.6; max-width: 840px; }
+  .intro b { color: #2c3e50; }
+
+  .story-layout { display: flex; gap: 22px; align-items: flex-start; }
+  .chart-side { flex: 1 1 auto; min-width: 0; position: sticky; top: 16px; }
+  .chapters-side { flex: 0 0 290px; }
+
+  #chart { width: 100%; height: 500px; }
+
+  .chapter { padding: 14px 16px; border-radius: 11px; margin-bottom: 11px; background: #f8fafc; border-left: 4px solid #cfd8e3; cursor: pointer; transition: all 0.2s; }
+  .chapter:hover { background: #eef3f8; }
+  .chapter.active { background: #fff; border-left-color: #005baa; box-shadow: 0 3px 14px rgba(0,60,120,0.10); }
+  .chapter .num { font-size: 10.5px; font-weight: 700; color: #8a97a4; letter-spacing: 0.5px; text-transform: uppercase; }
+  .chapter h3 { font-size: 14.5px; color: #1a2b3c; margin: 3px 0 6px; }
+  .chapter p { font-size: 12.5px; color: #5a6b7c; line-height: 1.5; }
+
+  .caption { font-size: 13px; color: #005baa; font-weight: 600; margin-bottom: 8px; min-height: 18px; }
+
+  .legends { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-start; }
+  .legend-block .lbl { font-weight: 700; color: #44515e; margin-bottom: 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #44515e; margin-bottom: 3px; font-size: 12px; }
+  .ldot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.1); }
+  #sizeLegend { font-size: 12px; color: #44515e; }
+  .size-demo { display: flex; align-items: center; gap: 7px; }
+  .size-demo .sd { border-radius: 50%; background: #8a97a4; opacity: 0.55; display: inline-block; }
+
+  .footnote { font-size: 12.5px; color: #5a6b7c; margin-top: 18px; line-height: 1.6; background: #fff8f3; padding: 14px 16px; border-radius: 9px; border-left: 4px solid #f46d43; }
+  .big-num { font-weight: 800; color: #f46d43; }
+
+  @media (max-width: 820px) {
+    .story-layout { flex-direction: column; }
+    .chart-side { position: relative; width: 100%; }
+    .chapters-side { flex: 1 1 auto; width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="title">The Story of Our Land at Dubai Festival City</div>
+  <div class="intro">
+    We hold a portfolio of land plots, each able to hold buildings we can sell or lease &mdash; apartments, villas, hotels, retail, offices. This map places every plot by its <b>land size</b> (left to right) and <b>how much can be built on it</b> (bottom to top). Walk through the chapters to see what we own, what kind, what's built, and where the opportunity is. <b>Click any plot</b> for details.
+  </div>
+
+  <div class="legends">
+    <div class="legend-block">
+      <div class="lbl" id="colorLbl">Colour = type of development</div>
+      <div class="legend-row" id="legendRow" style="display:flex;gap:14px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="legend-block">
+      <div class="lbl" id="sizeLbl">Bubble size</div>
+      <div id="sizeLegend"></div>
+    </div>
+  </div>
+
+  <div class="story-layout">
+    <div class="chart-side">
+      <div id="searchWrap" style="position:relative;margin-bottom:10px;max-width:340px;">
+        <input id="plotSearch" type="text" placeholder="🔍 Search by plot ID or name…" autocomplete="off"
+          style="width:100%;padding:7px 30px 7px 11px;border:1px solid #d2dae2;border-radius:8px;font-size:12.5px;color:#1a2b3c;outline:none;" />
+        <span id="searchClear" style="display:none;position:absolute;right:9px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:15px;">&times;</span>
+        <div id="searchResults" style="display:none;position:absolute;top:36px;left:0;right:0;z-index:50;background:#fff;border:1px solid #d2dae2;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;"></div>
+      </div>
+      <label id="labelToggleWrap" style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#44515e;cursor:pointer;margin-bottom:10px;user-select:none;">
+        <span id="labelToggleSwitch" style="position:relative;width:34px;height:18px;background:#cbd5de;border-radius:10px;transition:background 0.2s;display:inline-block;">
+          <span id="labelToggleKnob" style="position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:left 0.2s;"></span>
+        </span>
+        Show names beside dots
+      </label>
+      <div id="zoneWrap" style="position:relative;display:inline-block;margin-left:14px;">
+        <button type="button" id="zoneBtn" style="padding:5px 11px;border:1px solid #d2dae2;border-radius:8px;background:#fff;cursor:pointer;font-size:12px;color:#44515e;">📍 Highlight zones ▾</button>
+        <div id="zonePanel" style="display:none;position:absolute;top:32px;left:0;z-index:60;background:#fff;border:1px solid #d2dae2;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.12);padding:8px;max-height:260px;overflow-y:auto;min-width:150px;">
+          <label style="display:flex;align-items:center;gap:6px;padding:3px 4px;cursor:pointer;font-size:12px;border-bottom:1px solid #eee;margin-bottom:4px;"><input type="checkbox" id="zoneClearAll"> <b>Clear all</b></label>
+          <div id="zoneChecks"></div>
+        </div>
+      </div>
+      <div class="caption" id="caption">Tap a chapter to explore →</div>
+      <div id="oppFilterBar" style="display:none;gap:7px;flex-wrap:wrap;margin-bottom:10px;"></div>
+      <div id="status" style="font-size:13px;color:#999;padding:30px;text-align:center;">Loading…</div>
+      <div id="chart" style="display:none;"></div>
+      <div id="plotList" style="display:none;margin-top:12px;"></div>
+    </div>
+    <div class="chapters-side" id="chapters"></div>
+  </div>
+
+  <div class="footnote" id="footnote"></div>
+
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+const data = [{"pa":232605.0,"gfa":246603.0,"far":1.06,"built":246603,"rem":0,"desc":"Festival Waterfront Centre","id":4124755,"lu":"Retail & Malls","sec":"Regional Shopping Centre(Minimum Gfa 100,000 Sqm)","val":0,"zone":"8"},{"pa":34506.0,"gfa":95000.0,"far":2.75,"built":95000,"rem":0,"desc":"Hotels - Intercontinental & Crowne Plaza ","id":4124750,"lu":"Hotels","sec":"5 Star Hotel","val":0,"zone":"8"},{"pa":53429.0,"gfa":71833.0,"far":1.34,"built":0,"rem":71833,"desc":"Retail Expansion","id":4124754,"lu":"Retail & Malls","sec":"Malls Without Superstore","val":123300000,"zone":"8"},{"pa":51133.0,"gfa":44788.0,"far":0.88,"built":0,"rem":44788,"desc":"Residential","id":4124792,"lu":"Apartments","sec":"Residential Apartments","val":89200000,"zone":"11"},{"pa":2844.0,"gfa":900.0,"far":0.32,"built":0,"rem":900,"desc":"Local Mosque  ","id":4124772,"lu":"Community","sec":"Other Religious Buildings","val":1900000,"zone":"13"},{"pa":43536.0,"gfa":48638.0,"far":1.12,"built":0,"rem":48638,"desc":"Residential","id":4124793,"lu":"Apartments","sec":"Residential Apartments","val":96900000,"zone":"11"},{"pa":14800.0,"gfa":75000.0,"far":5.07,"built":0,"rem":75000,"desc":"Mixed Use Development","id":4124748,"lu":"Retail & Malls","sec":"Local Shopping Center","val":125100000,"zone":"8"},{"pa":100867.0,"gfa":128838.0,"far":1.29,"built":0,"rem":128838,"desc":"Resort Hotel","id":4124753,"lu":"Hotels","sec":"Resort Hotel","val":249600000,"zone":"9"},{"pa":9576.0,"gfa":75652.0,"far":7.89,"built":0,"rem":75652,"desc":"Parcel 17c - Hotel","id":4124952,"lu":"Hotels","sec":"3 & 4 Star Hotel","val":158800000,"zone":"13"},{"pa":12577.0,"gfa":31198.0,"far":2.48,"built":0,"rem":31198,"desc":"Residential","id":4124738,"lu":"Apartments","sec":"Residential Apartments","val":71400000,"zone":"8"},{"pa":34293.0,"gfa":43204.0,"far":1.26,"built":0,"rem":43204,"desc":"Residential","id":4124791,"lu":"Apartments","sec":"Residential Apartments","val":86000000,"zone":"11"},{"pa":4457.0,"gfa":14338.0,"far":3.22,"built":0,"rem":14338,"desc":"Residential","id":4124745,"lu":"Apartments","sec":"Residential Apartments","val":32800000,"zone":"8"},{"pa":6743.0,"gfa":54041.0,"far":8.01,"built":54041,"rem":0,"desc":"Offices","id":4124746,"lu":"Offices","sec":"Multi-User Office Building","val":0,"zone":"8"},{"pa":5871.0,"gfa":38860.0,"far":6.62,"built":0,"rem":38860,"desc":"Parcel 16a - Residential","id":4124954,"lu":"Apartments","sec":"Residential Apartments","val":81300000,"zone":"13"},{"pa":7431.0,"gfa":2986.0,"far":0.4,"built":0,"rem":2986,"desc":"Parcel 14a - Commercial (Retail)","id":4124966,"lu":"Retail & Malls","sec":"Local Shopping Center","val":6400000,"zone":"13"},{"pa":6024.0,"gfa":3414.0,"far":0.57,"built":0,"rem":3414,"desc":"Parcel 16b - Commercial (Retail)","id":4124953,"lu":"Retail & Malls","sec":"Local Shopping Center","val":7300000,"zone":"13"},{"pa":4067.0,"gfa":4440.0,"far":1.09,"built":0,"rem":4440,"desc":"Juma Mosque","id":4124964,"lu":"Community","sec":"Jumma Mosque","val":10000000,"zone":"11"},{"pa":33626.0,"gfa":39030.0,"far":1.16,"built":6920,"rem":32110,"desc":"Residential","id":4124788,"lu":"Apartments","sec":"Residential Apartments","val":85500000,"zone":"11"},{"pa":17465.0,"gfa":23586.0,"far":1.35,"built":0,"rem":23586,"desc":"Residential","id":4124785,"lu":"Apartments","sec":"Residential Apartments","val":47000000,"zone":"11"},{"pa":6423.0,"gfa":7103.0,"far":1.11,"built":0,"rem":7103,"desc":"Residential","id":4124782,"lu":"Apartments","sec":"Residential Apartments","val":15600000,"zone":"11"},{"pa":30764.0,"gfa":35449.0,"far":1.15,"built":0,"rem":35449,"desc":"Residential","id":4124787,"lu":"Apartments","sec":"Residential Apartments","val":77600000,"zone":"11"},{"pa":22039.0,"gfa":3500.0,"far":0.16,"built":0,"rem":3500,"desc":"Country Club","id":4124786,"lu":"Parks & Leisure","sec":"Recreational Sports Club","val":0,"zone":"11"},{"pa":14014.0,"gfa":15418.0,"far":1.1,"built":0,"rem":15418,"desc":"Residential","id":4124784,"lu":"Apartments","sec":"Residential Apartments","val":30700000,"zone":"11"},{"pa":10386.0,"gfa":1378.0,"far":0.13,"built":1378,"rem":0,"desc":"Golf Maintenance compound ","id":4124783,"lu":"Utility & Roads","sec":"Utility","val":0,"zone":"11"},{"pa":67740.0,"gfa":75600.0,"far":1.12,"built":0,"rem":75600,"desc":"Residential","id":4124794,"lu":"Apartments","sec":"Residential Apartments","val":143000000,"zone":"11"},{"pa":73016.0,"gfa":81900.0,"far":1.12,"built":0,"rem":81900,"desc":"Residential","id":4124795,"lu":"Apartments","sec":"Residential Apartments","val":154900000,"zone":"11"},{"pa":34902.0,"gfa":47487.0,"far":1.36,"built":0,"rem":47487,"desc":"Residential","id":4124790,"lu":"Apartments","sec":"Residential Apartments","val":104000000,"zone":"11"},{"pa":9630.0,"gfa":4395.0,"far":0.46,"built":0,"rem":4395,"desc":"Plot 2  - Facilities Management","id":4124834,"lu":"Utility & Roads","sec":"Utility","val":0,"zone":"14"},{"pa":28324.0,"gfa":2437.0,"far":0.09,"built":0,"rem":2437,"desc":"Parcel 13 - District Park with Community Facilties","id":4124824,"lu":"Parks & Leisure","sec":"Activity Oriented Regional Park","val":0,"zone":"12"},{"pa":6767.0,"gfa":4440.0,"far":0.66,"built":0,"rem":4440,"desc":"Juma Mosque ","id":4124823,"lu":"Community","sec":"Jumma Mosque","val":10000000,"zone":"12"},{"pa":11346.0,"gfa":25000.0,"far":2.2,"built":0,"rem":25000,"desc":"Plot 1 - Future Development","id":4124963,"lu":"Utility & Roads","sec":"Utility","val":0,"zone":"14"},{"pa":57586.0,"gfa":42204.0,"far":0.73,"built":0,"rem":42204,"desc":"Office Park  Phase 3","id":4124825,"lu":"Offices","sec":"Multi-User Office Building","val":59300000,"zone":"14"},{"pa":60522.0,"gfa":57600.0,"far":0.95,"built":0,"rem":57600,"desc":"Office Park  Phase 2","id":4124826,"lu":"Offices","sec":"Multi-User Office Building","val":72500000,"zone":"14"},{"pa":61854.0,"gfa":61696.0,"far":1.0,"built":9300,"rem":52396,"desc":"Office Park  Phase 1","id":4124827,"lu":"Offices","sec":"Multi-User Office Building","val":77700000,"zone":"14"},{"pa":13297.0,"gfa":57113.0,"far":4.3,"built":0,"rem":57113,"desc":"Parcel 05 - Residential","id":4124818,"lu":"Apartments","sec":"Residential Apartments","val":102400000,"zone":"12"},{"pa":8113.0,"gfa":36000.0,"far":4.44,"built":0,"rem":36000,"desc":"Parcel 04 - Residential","id":4124813,"lu":"Apartments","sec":"Residential Apartments","val":71700000,"zone":"12"},{"pa":13691.0,"gfa":57113.0,"far":4.17,"built":0,"rem":57113,"desc":"Parcel 03 - Residential","id":4124819,"lu":"Apartments","sec":"Residential Apartments","val":102400000,"zone":"12"},{"pa":8947.0,"gfa":36000.0,"far":4.02,"built":0,"rem":36000,"desc":"Parcel 02 - Residential","id":4124814,"lu":"Apartments","sec":"Residential Apartments","val":71700000,"zone":"12"},{"pa":7412.0,"gfa":36000.0,"far":4.86,"built":0,"rem":36000,"desc":"Parcel 06 - Residential","id":4124811,"lu":"Apartments","sec":"Residential Apartments","val":71700000,"zone":"12"},{"pa":14647.0,"gfa":55058.0,"far":3.76,"built":13654,"rem":41404,"desc":"Parcel 01- Residential  ","id":4124820,"lu":"Apartments","sec":"Residential Apartments","val":98700000,"zone":"12"},{"pa":13051.0,"gfa":57113.0,"far":4.38,"built":0,"rem":57113,"desc":"Parcel 07 - Residential","id":4124817,"lu":"Apartments","sec":"Residential Apartments","val":102400000,"zone":"12"},{"pa":6912.0,"gfa":36000.0,"far":5.21,"built":0,"rem":36000,"desc":"Parcel 08 - Residential","id":4124810,"lu":"Apartments","sec":"Residential Apartments","val":71700000,"zone":"12"},{"pa":8990.0,"gfa":36000.0,"far":4.0,"built":0,"rem":36000,"desc":"Parcel 09 - Residential","id":4124815,"lu":"Apartments","sec":"Residential Apartments","val":71700000,"zone":"12"},{"pa":15650.0,"gfa":57113.0,"far":3.65,"built":0,"rem":57113,"desc":"Parcel 10 - Residential","id":4124822,"lu":"Apartments","sec":"Residential Apartments","val":102400000,"zone":"12"},{"pa":9296.0,"gfa":36000.0,"far":3.87,"built":0,"rem":36000,"desc":"Parcel 11 - Residential","id":4124816,"lu":"Apartments","sec":"Residential Apartments","val":71700000,"zone":"12"},{"pa":14998.0,"gfa":55613.0,"far":3.72,"built":0,"rem":55613,"desc":"Parcel 12 - Residential","id":4124821,"lu":"Apartments","sec":"Residential Apartments","val":102400000,"zone":"12"},{"pa":7722.0,"gfa":30190.0,"far":3.91,"built":0,"rem":30190,"desc":"Parcel 08 - Residential","id":4124949,"lu":"Apartments","sec":"Residential Apartments","val":54100000,"zone":"13"},{"pa":3742.0,"gfa":1479.0,"far":0.4,"built":0,"rem":1479,"desc":"Parcel 20 - Community Facilities","id":4124948,"lu":"Parks & Leisure","sec":"Recreational Sports Club","val":0,"zone":"13"},{"pa":7902.0,"gfa":29440.0,"far":3.73,"built":0,"rem":29440,"desc":"Parcel 09 - Residential","id":4124777,"lu":"Apartments","sec":"Residential Apartments","val":52800000,"zone":"13"},{"pa":5903.0,"gfa":2362.0,"far":0.4,"built":0,"rem":2362,"desc":"Private Nursery","id":4124798,"lu":"Community","sec":"Nursery/ Child Care","val":0,"zone":"12"},{"pa":46730.0,"gfa":45307.0,"far":0.97,"built":45307,"rem":0,"desc":"Al Badia Phase 3","id":4124805,"lu":"Apartments","sec":"Residential Apartments","val":0,"zone":"12"},{"pa":66926.0,"gfa":30941.0,"far":0.46,"built":23145,"rem":7796,"desc":"American Universal Secondary School  ","id":4124768,"lu":"Community","sec":"Private School","val":0,"zone":"5"},{"pa":3245.0,"gfa":1000.0,"far":0.31,"built":0,"rem":1000,"desc":"Plot 5 - Future Development","id":4124934,"lu":"Utility & Roads","sec":"Utility","val":0,"zone":"5"},{"pa":6666.0,"gfa":45706.0,"far":6.86,"built":0,"rem":45706,"desc":"Parcel 12 - Residential","id":4124945,"lu":"Apartments","sec":"Residential Apartments","val":81900000,"zone":"13"},{"pa":7079.0,"gfa":45702.0,"far":6.46,"built":0,"rem":45702,"desc":"Parcel 11 - Residential","id":4124779,"lu":"Apartments","sec":"Residential Apartments","val":81900000,"zone":"13"},{"pa":7740.0,"gfa":45702.0,"far":5.9,"built":0,"rem":45702,"desc":"Parcel 10 - Residential","id":4124946,"lu":"Apartments","sec":"Residential Apartments","val":81900000,"zone":"13"},{"pa":8041.0,"gfa":45702.0,"far":5.68,"built":0,"rem":45702,"desc":"Parcel 04 - Residential","id":4124778,"lu":"Apartments","sec":"Residential Apartments","val":81900000,"zone":"13"},{"pa":24176.0,"gfa":47100.0,"far":1.95,"built":0,"rem":47100,"desc":"Al Badia Phase 4","id":4124803,"lu":"Retail & Malls","sec":"Local Shopping Center","val":81500000,"zone":"12"},{"pa":1500.0,"gfa":900.0,"far":0.6,"built":0,"rem":900,"desc":"Local Mosque  ","id":4124797,"lu":"Community","sec":"Other Religious Buildings","val":2000000,"zone":"12"},{"pa":5885.0,"gfa":27411.0,"far":4.66,"built":0,"rem":27411,"desc":"Parcel 13c - Hotel","id":4124942,"lu":"Hotels","sec":"3 & 4 Star Hotel","val":57500000,"zone":"13"},{"pa":6919.0,"gfa":7820.0,"far":1.13,"built":0,"rem":7820,"desc":"Parcel 13b - Commercial (Retail)","id":4124776,"lu":"Retail & Malls","sec":"Local Shopping Center","val":15200000,"zone":"13"},{"pa":6776.0,"gfa":26515.0,"far":3.91,"built":0,"rem":26515,"desc":"Parcel 02 - Offices","id":4124939,"lu":"Offices","sec":"Multi-User Office Building","val":33400000,"zone":"13"},{"pa":9430.0,"gfa":7865.0,"far":0.83,"built":0,"rem":7865,"desc":"Villas ","id":4124917,"lu":"Villas","sec":"Compound Villa","val":17800000,"zone":"10"},{"pa":9050.0,"gfa":7833.0,"far":0.87,"built":0,"rem":7833,"desc":"Villas ","id":4124915,"lu":"Villas","sec":"Compound Villa","val":17700000,"zone":"10"},{"pa":2603.0,"gfa":6722.0,"far":2.58,"built":0,"rem":6722,"desc":"Hillside Village (Condos 8)","id":4124757,"lu":"Apartments","sec":"Residential Apartments","val":12000000,"zone":"10"},{"pa":7799.0,"gfa":8400.0,"far":1.08,"built":0,"rem":8400,"desc":"Apartments","id":4124913,"lu":"Apartments","sec":"Residential Apartments","val":16700000,"zone":"10"},{"pa":14636.0,"gfa":38250.0,"far":2.61,"built":38250,"rem":0,"desc":"Hillside Village (Condos 1-7)","id":4124763,"lu":"Apartments","sec":"Residential Apartments","val":0,"zone":"10"},{"pa":4546.0,"gfa":6000.0,"far":1.32,"built":0,"rem":6000,"desc":"Apartments","id":4124904,"lu":"Apartments","sec":"Residential Apartments","val":11900000,"zone":"10"},{"pa":3642.0,"gfa":8400.0,"far":2.31,"built":0,"rem":8400,"desc":"Apartments","id":4124900,"lu":"Apartments","sec":"Residential Apartments","val":16700000,"zone":"10"},{"pa":4617.0,"gfa":6000.0,"far":1.3,"built":0,"rem":6000,"desc":"Apartments","id":4124906,"lu":"Apartments","sec":"Residential Apartments","val":11900000,"zone":"10"},{"pa":4215.0,"gfa":5200.0,"far":1.23,"built":0,"rem":5200,"desc":"Apartments","id":4124903,"lu":"Apartments","sec":"Residential Apartments","val":10400000,"zone":"10"},{"pa":7151.0,"gfa":8400.0,"far":1.17,"built":0,"rem":8400,"desc":"Apartments","id":4124912,"lu":"Apartments","sec":"Residential Apartments","val":16700000,"zone":"10"},{"pa":6010.0,"gfa":10800.0,"far":1.8,"built":0,"rem":10800,"desc":"Apartments","id":4124910,"lu":"Apartments","sec":"Residential Apartments","val":21500000,"zone":"10"},{"pa":2689.0,"gfa":11134.0,"far":4.14,"built":0,"rem":11134,"desc":"Apartments","id":4124866,"lu":"Apartments","sec":"Residential Apartments","val":20000000,"zone":"10"},{"pa":2079.0,"gfa":4160.0,"far":2.0,"built":0,"rem":4160,"desc":"Apartments","id":4124861,"lu":"Apartments","sec":"Residential Apartments","val":8300000,"zone":"10"},{"pa":5021.0,"gfa":8020.0,"far":1.6,"built":0,"rem":8020,"desc":"Apartments","id":4124907,"lu":"Apartments","sec":"Residential Apartments","val":16000000,"zone":"10"},{"pa":10201.0,"gfa":13613.0,"far":1.33,"built":0,"rem":13613,"desc":"Apartments","id":4124919,"lu":"Apartments","sec":"Residential Apartments","val":23300000,"zone":"10"},{"pa":2667.0,"gfa":3148.0,"far":1.18,"built":0,"rem":3148,"desc":"Villas ","id":4124864,"lu":"Villas","sec":"Compound Villa","val":7100000,"zone":"10"},{"pa":3223.0,"gfa":3935.0,"far":1.22,"built":0,"rem":3935,"desc":"Villas ","id":4124868,"lu":"Villas","sec":"Compound Villa","val":8900000,"zone":"10"},{"pa":2006.0,"gfa":2403.0,"far":1.2,"built":0,"rem":2403,"desc":"Villas ","id":4124857,"lu":"Villas","sec":"Compound Villa","val":5400000,"zone":"10"},{"pa":2017.0,"gfa":2415.0,"far":1.2,"built":0,"rem":2415,"desc":"Apartments","id":4124858,"lu":"Apartments","sec":"Residential Apartments","val":5400000,"zone":"10"},{"pa":3594.0,"gfa":2352.0,"far":0.65,"built":0,"rem":2352,"desc":"Villas ","id":4124899,"lu":"Villas","sec":"Compound Villa","val":5300000,"zone":"10"},{"pa":5341.0,"gfa":4390.0,"far":0.82,"built":0,"rem":4390,"desc":"Apartments","id":4124921,"lu":"Apartments","sec":"Residential Apartments","val":9800000,"zone":"10"},{"pa":5257.0,"gfa":3393.0,"far":0.65,"built":0,"rem":3393,"desc":"Villas ","id":4124908,"lu":"Villas","sec":"Compound Villa","val":7700000,"zone":"10"},{"pa":3291.0,"gfa":2917.0,"far":0.89,"built":0,"rem":2917,"desc":"Villas - Al Badia Heights Phase 1","id":4124898,"lu":"Villas","sec":"Compound Villa","val":6600000,"zone":"10"},{"pa":3390.0,"gfa":2656.0,"far":0.78,"built":0,"rem":2656,"desc":"Villas - Al Badia Heights Phase 2","id":4124924,"lu":"Villas","sec":"Compound Villa","val":6000000,"zone":"10"},{"pa":2943.0,"gfa":6671.0,"far":2.27,"built":0,"rem":6671,"desc":"Hillside Village (Condos 9)","id":4124758,"lu":"Apartments","sec":"Residential Apartments","val":12000000,"zone":"10"},{"pa":35513.0,"gfa":29786.0,"far":0.84,"built":29786,"rem":0,"desc":"Al Badia Phase 1 & 2 East","id":4124804,"lu":"Apartments","sec":"Residential Apartments","val":0,"zone":"10"},{"pa":3876.0,"gfa":3917.0,"far":1.01,"built":0,"rem":3917,"desc":"Apartments","id":4124901,"lu":"Apartments","sec":"Residential Apartments","val":8900000,"zone":"10"},{"pa":906.0,"gfa":979.0,"far":1.08,"built":0,"rem":979,"desc":"Villas ","id":4124848,"lu":"Villas","sec":"Compound Villa","val":2200000,"zone":"10"},{"pa":2674.0,"gfa":2515.0,"far":0.94,"built":0,"rem":2515,"desc":"Villas ","id":4124865,"lu":"Villas","sec":"Compound Villa","val":5700000,"zone":"10"},{"pa":2745.0,"gfa":2536.0,"far":0.92,"built":0,"rem":2536,"desc":"Villas ","id":4124867,"lu":"Villas","sec":"Compound Villa","val":5700000,"zone":"10"},{"pa":4572.0,"gfa":4628.0,"far":1.01,"built":0,"rem":4628,"desc":"Villas ","id":4124905,"lu":"Villas","sec":"Compound Villa","val":10500000,"zone":"10"},{"pa":9145.0,"gfa":6928.0,"far":0.76,"built":0,"rem":6928,"desc":"Villas - Al Badia Heights Phase 3","id":4124916,"lu":"Villas","sec":"Compound Villa","val":15700000,"zone":"10"},{"pa":6405.0,"gfa":4985.0,"far":0.78,"built":0,"rem":4985,"desc":"Villas ","id":4124911,"lu":"Villas","sec":"Compound Villa","val":11300000,"zone":"10"},{"pa":9824.0,"gfa":8846.0,"far":0.9,"built":0,"rem":8846,"desc":"Villas ","id":4124918,"lu":"Villas","sec":"Compound Villa","val":20800000,"zone":"10"},{"pa":19112.0,"gfa":14324.0,"far":0.75,"built":0,"rem":14324,"desc":"Villas - Al Badia Heights Phase 4","id":4124923,"lu":"Villas","sec":"Compound Villa","val":32400000,"zone":"10"},{"pa":54598.0,"gfa":39934.0,"far":0.73,"built":39934,"rem":0,"desc":"Al Areesh Club / Al Badia Phase 1 & 2 West","id":4124969,"lu":"Apartments","sec":"Residential Apartments","val":0,"zone":"10"},{"pa":2028.0,"gfa":2980.0,"far":1.47,"built":0,"rem":2980,"desc":"Villas ","id":4124860,"lu":"Villas","sec":"Compound Villa","val":6700000,"zone":"10"},{"pa":3910.0,"gfa":5665.0,"far":1.45,"built":0,"rem":5665,"desc":"Apartments","id":4124902,"lu":"Apartments","sec":"Residential Apartments","val":12800000,"zone":"10"},{"pa":7305.0,"gfa":5172.0,"far":0.71,"built":0,"rem":5172,"desc":"Villas - Al Badia Heights Phase 5","id":4124922,"lu":"Villas","sec":"Compound Villa","val":11700000,"zone":"10"},{"pa":2440.0,"gfa":2980.0,"far":1.22,"built":0,"rem":2980,"desc":"Townhouses","id":4124863,"lu":"Villas","sec":"Compound Villa","val":5500000,"zone":"10"},{"pa":1251.0,"gfa":1788.0,"far":1.43,"built":0,"rem":1788,"desc":"Townhouses","id":4124849,"lu":"Villas","sec":"Compound Villa","val":3300000,"zone":"10"},{"pa":1674.0,"gfa":2384.0,"far":1.42,"built":0,"rem":2384,"desc":"Townhouses","id":4124853,"lu":"Villas","sec":"Compound Villa","val":4400000,"zone":"10"},{"pa":1525.0,"gfa":2086.0,"far":1.37,"built":0,"rem":2086,"desc":"Townhouses","id":4124850,"lu":"Villas","sec":"Compound Villa","val":3800000,"zone":"10"},{"pa":82158.0,"gfa":67250.0,"far":0.82,"built":67250,"rem":0,"desc":"IKEA , Hypermarket, Atrium, Plugins","id":4124769,"lu":"Retail & Malls","sec":"Superstore","val":0,"zone":"4"},{"pa":11401.0,"gfa":36725.0,"far":3.22,"built":0,"rem":36725,"desc":"Retail, Hotel, Residential","id":4124761,"lu":"Apartments","sec":"Residential Apartments","val":48100000,"zone":"4"},{"pa":13017.0,"gfa":32928.0,"far":2.53,"built":32678,"rem":250,"desc":"Hotel","id":4124759,"lu":"Hotels","sec":"3 & 4 Star Hotel","val":0,"zone":"4"},{"pa":3504.0,"gfa":2300.0,"far":0.66,"built":2300,"rem":0,"desc":"Plot 4 - Data Centre","id":4124935,"lu":"Utility & Roads","sec":"Utility","val":0,"zone":"5"},{"pa":33033.0,"gfa":9628.0,"far":0.28,"built":9628,"rem":0,"desc":"ACE Hardware","id":4124766,"lu":"Retail & Malls","sec":"Building Material Store","val":0,"zone":"4"},{"pa":42042.0,"gfa":24075.0,"far":0.57,"built":1874,"rem":22201,"desc":"Retail Centre  ","id":4124767,"lu":"Retail & Malls","sec":"Malls Without Superstore","val":24600000,"zone":"4"},{"pa":18710.0,"gfa":44693.0,"far":2.39,"built":0,"rem":44693,"desc":"Mixed Use","id":4124762,"lu":"Retail & Malls","sec":"Local Shopping Center","val":78300000,"zone":"4"},{"pa":44800.0,"gfa":160160.0,"far":3.58,"built":0,"rem":160160,"desc":"Residential","id":4124735,"lu":"Apartments","sec":"Residential Apartments","val":318900000,"zone":"4"},{"pa":2916.0,"gfa":19500.0,"far":6.69,"built":0,"rem":19500,"desc":"Commercial","id":4124743,"lu":"Retail & Malls","sec":"Local Shopping Center","val":28700000,"zone":"8"},{"pa":18519.0,"gfa":124800.0,"far":6.74,"built":0,"rem":124800,"desc":"Commercial","id":4124751,"lu":"Retail & Malls","sec":"Local Shopping Center","val":165900000,"zone":"8"},{"pa":32306.0,"gfa":68637.0,"far":2.12,"built":0,"rem":68637,"desc":"Hotel & Service Apartments","id":4124876,"lu":"Hotels","sec":"Suites/ Apartment Hotel","val":144600000,"zone":"3"},{"pa":22330.0,"gfa":64000.0,"far":2.87,"built":0,"rem":64000,"desc":"Water Front Tower ","id":4124873,"lu":"Offices","sec":"Multi-User Office Building","val":89600000,"zone":"3"},{"pa":23117.0,"gfa":68000.0,"far":2.94,"built":0,"rem":68000,"desc":"Water Front Tower ","id":4124875,"lu":"Offices","sec":"Multi-User Office Building","val":95200000,"zone":"3"},{"pa":33011.0,"gfa":45872.0,"far":1.39,"built":0,"rem":45872,"desc":"Water Front Residential 01d to 06d","id":4124877,"lu":"Apartments","sec":"Residential Apartments","val":105000000,"zone":"2"},{"pa":3716.0,"gfa":26000.0,"far":7.0,"built":0,"rem":26000,"desc":"Future Office/Retail Development","id":4124880,"lu":"Offices","sec":"Multi-User Office Building","val":36400000,"zone":"2"},{"pa":3774.0,"gfa":40874.0,"far":10.83,"built":0,"rem":40874,"desc":"High Rise Residential 01c","id":4124881,"lu":"Apartments","sec":"Residential Apartments","val":79200000,"zone":"2"},{"pa":3522.0,"gfa":1761.0,"far":0.5,"built":0,"rem":1761,"desc":"Plot Behind TSE Storage Tank","id":4124889,"lu":"Retail & Malls","sec":"Vehicle Showroom","val":2100000,"zone":"1"},{"pa":11998.0,"gfa":21000.0,"far":1.75,"built":0,"rem":21000,"desc":"Lexus 3S Facility","id":4124927,"lu":"Retail & Malls","sec":"Vehicle Showroom","val":22100000,"zone":"1"},{"pa":3911.0,"gfa":19740.0,"far":4.84,"built":0,"rem":19740,"desc":"High Rise Residential 03b","id":4124882,"lu":"Apartments","sec":"Residential Apartments","val":38200000,"zone":"2"},{"pa":19062.0,"gfa":96569.0,"far":5.06,"built":96569,"rem":0,"desc":"Marsa Plaza Residential & East Boulevard Retail","id":4124886,"lu":"Apartments","sec":"Residential Apartments","val":0,"zone":"2"},{"pa":4586.0,"gfa":32175.0,"far":6.9,"built":0,"rem":32175,"desc":"High Rise Residential 01b","id":4124883,"lu":"Apartments","sec":"Residential Apartments","val":62300000,"zone":"2"},{"pa":25735.0,"gfa":9213.0,"far":0.36,"built":9213,"rem":0,"desc":"Toyota / Lexus","id":4124894,"lu":"Retail & Malls","sec":"Vehicle Showroom","val":0,"zone":"1"},{"pa":8787.0,"gfa":3721.0,"far":0.42,"built":0,"rem":3721,"desc":"Future Development (On Main Boulevard)","id":4124965,"lu":"Retail & Malls","sec":"Vehicle Showroom","val":4100000,"zone":"1"},{"pa":13500.0,"gfa":3014.0,"far":0.22,"built":3014,"rem":0,"desc":"Volvo, Dodge-Chrysler-Jeep","id":4124832,"lu":"Retail & Malls","sec":"Vehicle Showroom","val":0,"zone":"1"},{"pa":3637.0,"gfa":1786.0,"far":0.49,"built":0,"rem":1786,"desc":"Future Development (between Honda & Volvo)","id":4124831,"lu":"Retail & Malls","sec":"Vehicle Showroom","val":2200000,"zone":"1"},{"pa":8278.0,"gfa":2395.0,"far":0.29,"built":2395,"rem":0,"desc":"Honda  ","id":4124891,"lu":"Retail & Malls","sec":"Vehicle Showroom","val":0,"zone":"1"},{"pa":5066.0,"gfa":25585.0,"far":5.05,"built":0,"rem":25585,"desc":"High Rise Residential 02a","id":4124884,"lu":"Apartments","sec":"Residential Apartments","val":49600000,"zone":"2"},{"pa":5487.0,"gfa":28979.0,"far":5.28,"built":0,"rem":28979,"desc":"High Rise Residential 01a","id":4124885,"lu":"Apartments","sec":"Residential Apartments","val":56100000,"zone":"2"},{"pa":22492.0,"gfa":32000.0,"far":1.42,"built":0,"rem":32000,"desc":"Park Tower","id":4124874,"lu":"Offices","sec":"Multi-User Office Building","val":40300000,"zone":"3"},{"pa":35350.0,"gfa":109884.0,"far":3.11,"built":0,"rem":109884,"desc":"Office Campus  ","id":4124878,"lu":"Offices","sec":"Multi-User Office Building","val":138400000,"zone":"3"},{"pa":3560.0,"gfa":26320.0,"far":7.39,"built":0,"rem":26320,"desc":"Parcel 13a - Offices","id":4124941,"lu":"Offices","sec":"Multi-User Office Building","val":33100000,"zone":"13"},{"pa":5110.0,"gfa":26320.0,"far":5.15,"built":0,"rem":26320,"desc":"Parcel 1a - Offices","id":4124940,"lu":"Offices","sec":"Multi-User Office Building","val":33100000,"zone":"13"},{"pa":5811.0,"gfa":26320.0,"far":4.53,"built":0,"rem":26320,"desc":"Parcel 1b - Offices","id":4124749,"lu":"Offices","sec":"Multi-User Office Building","val":33100000,"zone":"13"},{"pa":8085.0,"gfa":45702.0,"far":5.65,"built":0,"rem":45702,"desc":"Parcel 03 - Residential","id":4124943,"lu":"Apartments","sec":"Residential Apartments","val":81900000,"zone":"13"},{"pa":7208.0,"gfa":45702.0,"far":6.34,"built":0,"rem":45702,"desc":"Parcel 05 - Residential","id":4124944,"lu":"Apartments","sec":"Residential Apartments","val":81900000,"zone":"13"},{"pa":7611.0,"gfa":4440.0,"far":0.58,"built":0,"rem":4440,"desc":"Juma Mosque","id":4120130,"lu":"Community","sec":"Jumma Mosque","val":10000000,"zone":"7"},{"pa":1439.0,"gfa":2500.0,"far":1.74,"built":0,"rem":2500,"desc":"Facilities Management","id":4124728,"lu":"Utility & Roads","sec":"Utility","val":0,"zone":"7"},{"pa":7119.0,"gfa":30190.0,"far":4.24,"built":0,"rem":30190,"desc":"Parcel 06 - Residential","id":4124775,"lu":"Apartments","sec":"Residential Apartments","val":54100000,"zone":"13"},{"pa":6794.0,"gfa":30190.0,"far":4.44,"built":0,"rem":30190,"desc":"Parcel 07 - Residential","id":4124955,"lu":"Apartments","sec":"Residential Apartments","val":54100000,"zone":"13"},{"pa":9270.0,"gfa":37622.0,"far":4.06,"built":0,"rem":37622,"desc":"Parcel 17a - Residential & Commercial (Retail)","id":4124950,"lu":"Apartments","sec":"Residential Apartments","val":72200000,"zone":"13"},{"pa":9285.0,"gfa":59016.0,"far":6.35,"built":0,"rem":59016,"desc":"Parcel 17b - Residential & Commercial (Retail)","id":4124951,"lu":"Apartments","sec":"Residential Apartments","val":113200000,"zone":"13"},{"pa":19478.0,"gfa":104600.0,"far":5.38,"built":0,"rem":104600,"desc":"Parcel 14b - Hotel","id":4124938,"lu":"Hotels","sec":"3 & 4 Star Hotel","val":208600000,"zone":"13"},{"pa":37163.0,"gfa":74039.0,"far":1.99,"built":0,"rem":74039,"desc":"Parcel 15 - Hotel","id":4124780,"lu":"Hotels","sec":"3 & 4 Star Hotel","val":155400000,"zone":"13"},{"pa":49713.0,"gfa":27611.0,"far":0.56,"built":14000,"rem":13611,"desc":"Residential villa ","id":4124789,"lu":"Villas","sec":"Standalone Villa","val":0,"zone":"11"},{"pa":106371.0,"gfa":38980.0,"far":0.37,"built":31250,"rem":7730,"desc":"Deira International Secondary School","id":4124807,"lu":"Community","sec":"Private School","val":12500000,"zone":"14"},{"pa":104485.0,"gfa":27500.0,"far":0.26,"built":0,"rem":27500,"desc":"Medium Density Residential","id":4124806,"lu":"Apartments","sec":"Residential Apartments","val":41800000,"zone":"6"},{"pa":2500.0,"gfa":1250.0,"far":0.5,"built":0,"rem":1250,"desc":"Community Facilities ","id":4124852,"lu":"Parks & Leisure","sec":"Recreational Sports Club","val":0,"zone":"10"}];
+
+// Specific type colors (from secondary land use)
+const LU_COLORS = {
+  'Apartments':     '#FFE600',
+  'Villas':         '#D6D63A',
+  'Hotels':         '#F0C4F0',
+  'Retail & Malls': '#FF8C00',
+  'Offices':        '#FF0000',
+  'Mixed Use':      '#FF0000',
+  'Community':      '#00A8E0',
+  'Parks & Leisure':'#00CC00',
+  'Utility & Roads':'#7B96E8',
+  'Other':          '#E0E0E0'
+};
+const LU_ORDER = ['Apartments','Villas','Hotels','Retail & Malls','Offices','Community','Parks & Leisure','Utility & Roads','Other'];
+
+const maxPA = Math.max.apply(null, data.map(p=>p.pa));
+const maxG  = Math.max.apply(null, data.map(p=>p.gfa));
+const maxRem= Math.max.apply(null, data.map(p=>p.rem||0));
+const maxVal= Math.max.apply(null, data.map(p=>p.val||0));
+const totalRem = data.reduce((s,p)=>s+(p.rem||0),0);
+const totalBuilt = data.reduce((s,p)=>s+(p.built||0),0);
+const totalVal = data.reduce((s,p)=>s+(p.val||0),0);
+const builtCount = data.filter(p=>p.built>0).length;
+
+function lighten(hex, amt){
+  hex=(hex||'#ccc').replace('#','');
+  if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+  r=Math.round(r+(255-r)*amt);g=Math.round(g+(255-g)*amt);b=Math.round(b+(255-b)*amt);
+  return 'rgb('+r+','+g+','+b+')';
+}
+function fmtAED(v){
+  if(v>=1e9) return 'AED '+(v/1e9).toFixed(2)+'B';
+  if(v>=1e6) return 'AED '+(v/1e6).toFixed(1)+'M';
+  if(v>=1e3) return 'AED '+(v/1e3).toFixed(0)+'K';
+  return 'AED '+v;
+}
+
+const chapters = [
+  {
+    num:'Chapter 1', title:'\u{1F5FA}\uFE0F The Land & What\'s On It',
+    text:'Every dot is a plot \u2014 far right means big land, far left means small. The colour shows what each one is for: apartments, villas, hotels, retail, offices. Bubble size shows how much can be built there. We hold a few large plots and many smaller ones, mostly homes.',
+    caption:'Each dot is a plot. Placed by land size, coloured by type, sized by how much can be built.',
+    color:'lu', emphasize:null, dim:null
+  },
+  {
+    num:'Chapter 2', title:'\u{1F3D7}\uFE0F How Tall the Buildings Are',
+    text:'The slanted lines tell you how tall the buildings are. Plots near the top lines have tall buildings packed onto small land (towers). Plots near the bottom have low buildings spread over lots of land (villas, parks).',
+    caption:'The slanted lines show building height \u2014 from low-rise at the bottom to towers at the top.',
+    color:'lu', emphasize:'far', dim:null
+  },
+  {
+    num:'Chapter 3', title:'\u2705 What\'s Built So Far',
+    text:'Only ' + builtCount + ' of ' + data.length + ' plots are actually built. The plots with a green ring are built and active. Everything else is still on the drawing board \u2014 waiting to happen.',
+    caption:'Green-ringed plots are built & active. The rest are still to be developed.',
+    color:'built-ring', emphasize:null, dim:null
+  },
+  {
+    num:'Chapter 4', title:'\u2728 Where the Opportunity Is',
+    text:'The rings highlight where we can build. A blue ring marks a New Development \u2014 a fresh plot ready to build from the ground up. A bright-teal ring marks Room to Grow \u2014 a plot already started that can still take more. Bigger bubble = more that can be built.',
+    caption:'Blue ring = New Development. Teal ring = Room to Grow (already started).',
+    color:'lu', emphasize:null, dim:'built'
+  }
+];
+let activeChapter = 0;
+
+// Bubble size ALWAYS = how much can be built (gfa). Never changes — avoids confusion.
+function markerSize(p){
+  return 6 + (p.gfa/maxG)*30;
+}
+
+// track which categories are hidden (legend toggle)
+var hiddenCats = {};       // legacy (kept to avoid breakage); no longer toggled
+var isolatedCat = null;    // when set, only this land-use stays in colour; others grey out
+var showLabels = false;    // toggle: show plot names beside dots
+var highlightId = null;  // plot id currently highlighted via search
+var selectedZones = {};  // zone highlight selections
+
+// Zone palette (distinct colours)
+var ZONE_PALETTE = ['#000075','#3CB44B','#4363D8','#9A6324','#911EB4','#42D4F4','#F032E6','#7FFF00','#FABED4','#FF3D00','#000000','#8B0000','#FFD700','#0000FF'];
+function zoneColor(zone){
+  var zlist=[]; data.forEach(function(p){ if(p.zone && zlist.indexOf(p.zone)<0) zlist.push(p.zone); });
+  zlist.sort(function(a,b){ return (parseInt(a)||999)-(parseInt(b)||999); });
+  return ZONE_PALETTE[zlist.indexOf(zone) % ZONE_PALETTE.length];
+}
+function getSelectedZones(){ return Object.keys(selectedZones).filter(function(z){ return selectedZones[z]; }); }
+function hexToRgb(hex){ hex=hex.replace('#',''); if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]; return {r:parseInt(hex.substr(0,2),16),g:parseInt(hex.substr(2,2),16),b:parseInt(hex.substr(4,2),16)}; }
+function convexHull(points){
+  if(points.length<3) return points.slice();
+  var pts=points.slice().sort(function(a,b){ return a[0]-b[0] || a[1]-b[1]; });
+  function cross(o,a,b){ return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); }
+  var lo=[]; for(var i=0;i<pts.length;i++){ while(lo.length>=2 && cross(lo[lo.length-2],lo[lo.length-1],pts[i])<=0) lo.pop(); lo.push(pts[i]); }
+  var up=[]; for(var j=pts.length-1;j>=0;j--){ while(up.length>=2 && cross(up[up.length-2],up[up.length-1],pts[j])<=0) up.pop(); up.push(pts[j]); }
+  lo.pop(); up.pop(); return lo.concat(up);
+}
+function padHull(hull, padFactor, padAbs){
+  var cx=0,cy=0; hull.forEach(function(p){ cx+=p[0]; cy+=p[1]; }); cx/=hull.length; cy/=hull.length;
+  return hull.map(function(p){ var dx=p[0]-cx, dy=p[1]-cy, d=Math.sqrt(dx*dx+dy*dy)||1; return [p[0]+dx/d*padAbs, p[1]+dy/d*padAbs]; });
+}
+// build zone highlight traces (hull + hub-and-spoke link lines). Works in log space (chart is log).
+function buildZoneHighlights(){
+  var sel=getSelectedZones();
+  if(!sel.length) return [];
+  var traces=[];
+  function tx(v){ return Math.log10(v); }     // chart axes are log
+  function itx(v){ return Math.pow(10,v); }
+  sel.forEach(function(z){
+    var pts=data.filter(function(p){ return p.zone===z; });
+    if(!pts.length) return;
+    var col=zoneColor(z), rgb=hexToRgb(col);
+    var coords=pts.map(function(p){ return [tx(p.pa), tx(p.gfa)]; });
+    // hub-and-spoke link lines to centroid
+    if(coords.length>=2){
+      var cx=0,cy=0; coords.forEach(function(c){ cx+=c[0]; cy+=c[1]; }); cx/=coords.length; cy/=coords.length;
+      var lx=[],ly=[];
+      coords.forEach(function(c){ lx.push(itx(c[0]),itx(cx),null); ly.push(itx(c[1]),itx(cy),null); });
+      traces.push({ x:lx, y:ly, mode:'lines', type:'scatter', line:{color:'rgba('+rgb.r+','+rgb.g+','+rgb.b+',0.5)',width:1}, hoverinfo:'skip', showlegend:false });
+    }
+    var maxPAlocal=Math.max.apply(null,data.map(function(p){return p.pa;}));
+    if(coords.length===1){
+      var c=coords[0], r=0.12, ex=[],ey=[];
+      for(var a=0;a<=360;a+=15){ var rad=a*Math.PI/180; ex.push(itx(c[0]+r*Math.cos(rad))); ey.push(itx(c[1]+r*Math.sin(rad))); }
+      traces.push({ x:ex,y:ey,mode:'lines',type:'scatter',line:{color:col,width:2},fill:'toself',fillcolor:'rgba('+rgb.r+','+rgb.g+','+rgb.b+',0.10)',hoverinfo:'skip',showlegend:false });
+      return;
+    }
+    if(coords.length===2 || convexHull(coords).length<3){
+      var s=coords.slice().sort(function(a,b){return a[0]-b[0]||a[1]-b[1];});
+      var p0=s[0],p1=s[s.length-1];
+      var dx=p1[0]-p0[0],dy=p1[1]-p0[1],baseA=Math.atan2(dy,dx),r2=0.13,cX=[],cY=[],aa;
+      for(aa=-90;aa<=90;aa+=15){ var rd=baseA+aa*Math.PI/180; cX.push(p1[0]+r2*Math.cos(rd)); cY.push(p1[1]+r2*Math.sin(rd)); }
+      for(aa=90;aa<=270;aa+=15){ var rd2=baseA+aa*Math.PI/180; cX.push(p0[0]+r2*Math.cos(rd2)); cY.push(p0[1]+r2*Math.sin(rd2)); }
+      cX.push(cX[0]); cY.push(cY[0]);
+      traces.push({ x:cX.map(itx),y:cY.map(itx),mode:'lines',type:'scatter',line:{color:col,width:2,shape:'spline',smoothing:0.8},fill:'toself',fillcolor:'rgba('+rgb.r+','+rgb.g+','+rgb.b+',0.10)',hoverinfo:'skip',showlegend:false });
+      return;
+    }
+    var hull=padHull(convexHull(coords),0.06,0.06);
+    var hx=hull.map(function(p){return itx(p[0]);}), hy=hull.map(function(p){return itx(p[1]);});
+    hx.push(hx[0]); hy.push(hy[0]);
+    traces.push({ x:hx,y:hy,mode:'lines',type:'scatter',line:{color:col,width:2,shape:'spline',smoothing:0.6},fill:'toself',fillcolor:'rgba('+rgb.r+','+rgb.g+','+rgb.b+',0.10)',hoverinfo:'skip',showlegend:false });
+  });
+  return traces;
+}
+// Chapter 4 opportunity filter: 'all' | 'new' | 'grow' | 'built'
+var oppFilter = 'all';
+function passOppFilter(p){
+  if(oppFilter==='all') return true;
+  if(oppFilter==='new')   return (p.rem>0 && p.built<=0);
+  if(oppFilter==='grow')  return (p.rem>0 && p.built>0);
+  if(oppFilter==='built') return (p.rem<=0);
+  return true;
+}
+
+function buildTraces(ch){
+  const traces=[];
+  if(ch.color==='built-ring'){
+    // colour by type, but built plots get a thick green ring
+    LU_ORDER.forEach(function(lu){
+      if(hiddenCats[lu]) return;
+      var g=data.filter(p=>p.lu===lu);
+      if(!g.length) return;
+      var faded = (isolatedCat!=null && lu!==isolatedCat);
+      traces.push({
+        x:g.map(p=>p.pa), y:g.map(p=>p.gfa), type:'scatter', name:lu,
+        text: (showLabels && !faded) ? g.map(p=>p.desc) : undefined,
+        mode: (showLabels && !faded) ? 'markers+text' : 'markers',
+        textposition:'top center', textfont:{size:8.5, color:'#5a6b7c'},
+        marker:{
+          size:g.map(p=>markerSize(p)),
+          color: faded ? 'rgba(210,210,210,0.30)' : g.map(p=>LU_COLORS[lu]),
+          line:{ width:g.map(p=>p.built>0?2.5:0.6), color: faded ? '#e6e6e6' : g.map(p=>p.built>0?'#1a9850':'#fff') },
+          opacity: faded ? 1 : 0.85
+        },
+        customdata:g.map(p=>[p.id,p.desc,p.pa,p.built,p.rem,p.far,p.lu,p.gfa,p.sec,p.val]),
+        hovertemplate:'<extra></extra>'
+      });
+    });
+  } else {
+    LU_ORDER.forEach(function(lu){
+      if(hiddenCats[lu]) return;
+      var g=data.filter(p=>p.lu===lu);
+      var oppMode = ch.dim==='built';
+      if(oppMode) g = g.filter(passOppFilter); // Chapter 4 filter
+      if(!g.length) return;
+      var faded = (isolatedCat!=null && lu!==isolatedCat);
+      // Opportunity mode (Chapter 4): rings highlight the two kinds of opportunity
+      //   - completely unbuilt (fresh)   -> blue ring
+      //   - partially built (can expand) -> teal ring
+      //   - fully built (done)           -> no ring
+      traces.push({
+        x:g.map(p=>p.pa), y:g.map(p=>p.gfa), type:'scatter', name:lu,
+        text: (showLabels && !faded) ? g.map(p=>p.desc) : undefined,
+        mode: (showLabels && !faded) ? 'markers+text' : 'markers',
+        textposition:'top center', textfont:{size:8.5, color:'#5a6b7c'},
+        marker:{
+          size:g.map(p=>markerSize(p)),
+          color: faded ? 'rgba(210,210,210,0.30)' : LU_COLORS[lu],
+          line: faded ? {width:0.6,color:'#e6e6e6'} : ( oppMode ? {
+                    width: g.map(function(p){
+                      if(p.rem<=0) return 0.6;           // built - thin white edge
+                      return 2.5;                        // opportunity - ring (match Ch3)
+                    }),
+                    color: g.map(function(p){
+                      if(p.rem<=0) return '#fff';
+                      return (p.built>0) ? '#00E5C7' : '#1565C0'; // teal=grow, blue=new dev
+                    })
+                 } : {width:0.6,color:'#fff'} ),
+          opacity: 0.9
+        },
+        customdata:g.map(p=>[p.id,p.desc,p.pa,p.built,p.rem,p.far,p.lu,p.gfa,p.sec,p.val]),
+        hovertemplate:'<extra></extra>'
+      });
+    });
+  }
+  var emph = ch.emphasize==='far';
+  [0.5,1,2,4].forEach(function(far){
+    traces.push({
+      x:[800,maxPA], y:[far*800, far*maxPA], mode:'lines', type:'scatter',
+      hoverinfo:'skip', showlegend:false,
+      line:{ color: emph?'#9bb4cc':'#dbe3ea', width: emph?1.5:1, dash: far===1?'dash':'dot' }
+    });
+  });
+  // search highlight: a pulsing marker around the found plot
+  if(highlightId != null){
+    var hp = data.filter(function(p){ return String(p.id) === String(highlightId); });
+    if(hp.length){
+      traces.push({
+        x: hp.map(function(p){return p.pa;}), y: hp.map(function(p){return p.gfa;}),
+        mode:'markers', type:'scatter', hoverinfo:'skip', showlegend:false,
+        marker:{ size: hp.map(function(p){return markerSize(p)+16;}), color:'rgba(0,0,0,0)',
+                 line:{ width:3, color:'#FF1744' } }
+      });
+    }
+  }
+  return traces;
+}
+
+function buildOppFilterBar(ch){
+  const bar=document.getElementById('oppFilterBar');
+  if(ch.dim!=='built'){ bar.style.display='none'; document.getElementById('plotList').style.display='none'; return; }
+  bar.style.display='flex';
+  // counts
+  var nNew  = data.filter(function(p){return p.rem>0 && p.built<=0;}).length;
+  var nGrow = data.filter(function(p){return p.rem>0 && p.built>0;}).length;
+  var nBuilt= data.filter(function(p){return p.rem<=0;}).length;
+  var nAll  = data.length;
+  var opts=[
+    ['all','All plots',nAll,'#5a6b7c'],
+    ['new','New Development',nNew,'#1565C0'],
+    ['grow','Room to Grow',nGrow,'#00B89C'],
+    ['built','Already Built',nBuilt,'#1a9850']
+  ];
+  bar.innerHTML='<span style="font-size:11px;color:#8a97a4;align-self:center;margin-right:2px;">Show:</span>';
+  opts.forEach(function(o){
+    var active = oppFilter===o[0];
+    var b=document.createElement('button');
+    b.style.cssText='padding:5px 11px;border-radius:14px;border:1px solid '+(active?o[3]:'#d2dae2')+';background:'+(active?o[3]:'#fff')+';color:'+(active?'#fff':'#44515e')+';cursor:pointer;font-size:11.5px;';
+    b.innerHTML=o[1]+' <b>('+o[2]+')</b>';
+    b.onclick=function(){ oppFilter = (oppFilter===o[0] && o[0]!=='all') ? 'all' : o[0]; render(); };
+    bar.appendChild(b);
+  });
+  buildPlotList();
+}
+
+function buildPlotList(){
+  const box=document.getElementById('plotList');
+  const ch=chapters[activeChapter];
+  // show in Chapter 4 for ANY filter (including 'all')
+  if(ch.dim!=='built'){ box.style.display='none'; return; }
+  var list=data.filter(passOppFilter).slice();
+  // sort by how much can be built (biggest opportunity first)
+  list.sort(function(a,b){ return b.gfa - a.gfa; });
+  var labelMap={ 'all':'All plots', 'new':'New Development', 'grow':'Room to Grow', 'built':'Already Built' };
+  var ringColor={ 'all':'#5a6b7c', 'new':'#1565C0', 'grow':'#00B89C', 'built':'#1a9850' };
+  // per-plot accent: in "all" view, colour the row border by the plot's own opportunity type
+  function rowAccent(p){
+    if(oppFilter!=='all') return ringColor[oppFilter];
+    if(p.rem<=0) return '#1a9850';        // built
+    return (p.built>0) ? '#00B89C' : '#1565C0'; // grow / new
+  }
+  var html='<div style="font-size:12.5px;font-weight:700;color:#44515e;margin-bottom:8px;border-top:1px solid #eef2f6;padding-top:12px;">'+
+           labelMap[oppFilter]+' &mdash; '+list.length+' plots <span style="font-weight:400;color:#9aa7b4;">(sorted by how much can be built &middot; click a row to find it)</span></div>';
+  html+='<div id="plotListInner" style="max-height:230px;overflow-y:auto;border:1px solid #eef2f6;border-radius:8px;">';
+  list.forEach(function(p,i){
+    var metric;
+    if(p.rem>0 && p.built>0) metric = Number(p.rem).toLocaleString()+' m² remaining GFA';
+    else if(p.rem>0) metric = Number(p.rem).toLocaleString()+' m² to build';
+    else metric = Number(p.built).toLocaleString()+' m² built';
+    var isSel = (highlightId!=null && String(p.id)===String(highlightId));
+    html+='<div class="plotRow" data-id="'+p.id+'" style="display:flex;align-items:center;gap:10px;padding:7px 11px;'+
+          (isSel?'background:#fff4d6;':(i%2?'background:#fafbfc;':''))+'border-left:3px solid '+rowAccent(p)+';font-size:12px;cursor:pointer;">'+
+          '<span style="color:#aab4be;font-size:10.5px;white-space:nowrap;min-width:62px;font-family:monospace;">'+p.id+'</span>'+
+          '<span style="flex:1 1 auto;color:#1a2b3c;">'+p.desc+'</span>'+
+          '<span style="color:#8a97a4;font-size:11px;white-space:nowrap;">'+p.lu+'</span>'+
+          '<span style="color:'+rowAccent(p)+';font-weight:600;font-size:11px;white-space:nowrap;min-width:110px;text-align:right;">'+metric+'</span>'+
+          '</div>';
+  });
+  html+='</div>';
+  box.innerHTML=html;
+  box.style.display='block';
+  // wire row clicks -> highlight that plot (and open popup)
+  Array.prototype.forEach.call(box.querySelectorAll('.plotRow'), function(row){
+    row.onclick=function(){
+      var id=row.getAttribute('data-id');
+      highlightId = (String(highlightId)===String(id)) ? null : id; // toggle
+      render();
+      if(highlightId!=null){
+        var p=data.filter(function(x){return String(x.id)===String(highlightId);})[0];
+        if(p) showPopup([p.id,p.desc,p.pa,p.built,p.rem,p.far,p.lu,p.gfa,p.sec,p.val], null);
+      }
+    };
+  });
+  // scroll the selected row into view
+  if(highlightId!=null){
+    var sel=box.querySelector('.plotRow[data-id="'+highlightId+'"]');
+    if(sel) sel.scrollIntoView({block:'nearest'});
+  }
+}
+
+function render(){
+  const ch=chapters[activeChapter];
+  let traces=buildTraces(ch);
+  // zone highlights drawn UNDER the dots
+  var zoneHL=buildZoneHighlights();
+  if(zoneHL.length) traces=zoneHL.concat(traces);
+  const ann=[];
+  // Rise labels (Low-rise / Mid-rise / High-rise / Towers) on ALL chapters.
+  // Bold/dark in Chapter 2 (emphasize); light & subtle elsewhere (like a background watermark).
+  var isCh2 = (ch.emphasize==='far');
+  var labelDefs = [
+    { far:0.5, word:'Low-rise', xf:0.62 },
+    { far:1,   word:'Mid-rise', xf:0.42 },
+    { far:2,   word:'High-rise', xf:0.20 },
+    { far:4,   word:'Towers', xf:0.10 }
+  ];
+  labelDefs.forEach(function(ld){
+    var xPos = maxPA * ld.xf;
+    var yPos = ld.far * xPos;
+    if (yPos > maxG) { yPos = maxG * 0.92; xPos = yPos / ld.far; }
+    ann.push({
+      x: Math.log10(xPos), y: Math.log10(yPos),
+      text: ld.word, showarrow:false,
+      font:{ size: isCh2?11:10, color: isCh2 ? '#3a4a5a' : '#c2ccd6' },  // light grey when not Ch2
+      bgcolor: isCh2 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.55)', borderpad:2,
+      textangle: 0, opacity: isCh2 ? 0.97 : 0.85
+    });
+    // FAR value only in Chapter 2
+    if(isCh2){
+      var xf2 = ld.xf * 1.9; if (xf2 > 0.9) xf2 = 0.9;
+      var xPos2 = maxPA * xf2;
+      var yPos2 = ld.far * xPos2;
+      if (yPos2 > maxG) { yPos2 = maxG*0.96; xPos2 = yPos2/ld.far; }
+      ann.push({
+        x: Math.log10(xPos2), y: Math.log10(yPos2),
+        text: 'FAR ' + ld.far, showarrow:false,
+        font:{ size:9.5, color:'#9bb4cc' },
+        bgcolor:'rgba(255,255,255,0.8)', borderpad:1,
+        textangle: 0, opacity:0.9
+      });
+    }
+  });
+  const layout={
+    margin:{l:78,r:30,t:12,b:54},
+    xaxis:{ title:{text:'⟵ Smaller land &nbsp;&nbsp; LAND SIZE (m²) &nbsp;&nbsp; Bigger land ⟶', font:{size:12,color:'#5a6b7c'}}, type:'log', gridcolor:'#f4f7fa', zeroline:false, tickfont:{size:9.5,color:'#aab4be'} },
+    yaxis:{ title:{text:'GFA – sellable / leasable space (m²) ⟶', font:{size:12,color:'#5a6b7c'}}, type:'log', gridcolor:'#f4f7fa', zeroline:false, tickfont:{size:9.5,color:'#aab4be'} },
+    showlegend:false, hovermode:'closest', plot_bgcolor:'#fff', paper_bgcolor:'#fff',
+    annotations: ann, transition:{duration:500, easing:'cubic-in-out'}
+  };
+  Plotly.react('chart', traces, layout, {responsive:true, displayModeBar:true, displaylogo:false, modeBarButtonsToRemove:['select2d','lasso2d'], scrollZoom:true});
+  document.getElementById('caption').textContent = ch.caption;
+  buildOppFilterBar(ch);
+  updateColorLegend(ch);
+  updateSizeLegend(ch);
+}
+
+function updateColorLegend(ch){
+  const row=document.getElementById('legendRow');
+  const lbl=document.getElementById('colorLbl');
+  row.innerHTML='';
+  lbl.textContent='Colour = type of development  (click to focus on one)';
+  LU_ORDER.forEach(function(lu){
+    if(!data.some(p=>p.lu===lu)) return;
+    const d=document.createElement('div');
+    d.className='legend-item';
+    d.style.cursor='pointer';
+    d.style.userSelect='none';
+    // when something is isolated, dim the OTHER legend entries
+    var dim = (isolatedCat!=null && lu!==isolatedCat);
+    d.style.opacity = dim ? '0.35' : '1';
+    var active = (isolatedCat===lu);
+    d.innerHTML='<span class="ldot" style="background:'+LU_COLORS[lu]+'"></span> <span style="'+(active?'font-weight:700;text-decoration:underline;':'')+'">'+lu+'</span>';
+    d.onclick=function(){
+      isolatedCat = (isolatedCat===lu) ? null : lu;  // toggle isolate
+      render();
+    };
+    row.appendChild(d);
+  });
+  // Chapter 3 note about green ring
+  if(ch.color==='built-ring'){
+    const note=document.createElement('div');
+    note.className='legend-item';
+    note.innerHTML='<span class="ldot" style="background:#fff;border:2.5px solid #1a9850"></span> = built';
+    row.appendChild(note);
+  }
+  // Chapter 4 ring legend
+  if(ch.dim==='built'){
+    const o=document.createElement('div'); o.className='legend-item';
+    o.innerHTML='<span class="ldot" style="background:#fff;border:2px solid #1565C0"></span> = New Development';
+    row.appendChild(o);
+    const b=document.createElement('div'); b.className='legend-item';
+    b.innerHTML='<span class="ldot" style="background:#fff;border:2px solid #00E5C7"></span> = Room to Grow';
+    row.appendChild(b);
+  }
+}
+
+function updateSizeLegend(ch){
+  const cont=document.getElementById('sizeLegend');
+  const lbl=document.getElementById('sizeLbl');
+  lbl.textContent = 'Bubble size = how much can be built';
+  cont.innerHTML='<div class="size-demo"><span class="sd" style="width:9px;height:9px;"></span><span class="sd" style="width:17px;height:17px;"></span><span class="sd" style="width:27px;height:27px;"></span><span style="margin-left:6px;">small \u2192 big</span></div>';
+}
+
+function showPopup(cd, evt){
+  // cd = [id,desc,pa,built,rem,far,lu,allowed,sec,val]
+  const id=cd[0],desc=cd[1],pa=cd[2],built=cd[3],rem=cd[4],far=cd[5],lu=cd[6],allowed=cd[7],sec=cd[8],val=cd[9];
+  const base=LU_COLORS[lu]||'#B0BAC5';
+  const bg=lighten(base,0.86), bd=lighten(base,0.4);
+  let html='<b style="font-size:13px;">Plot '+id+'</b><br><span style="color:#5a6b7c;">'+desc+'</span><br><br>';
+  html+='🏙️ Type: <b>'+sec+'</b><br>';
+  html+='📐 Land size: <b>'+Number(pa).toLocaleString()+' m²</b><br>';
+  html+='🏢 Can hold: <b>'+Number(allowed).toLocaleString()+' m²</b><br>';
+  html+='✅ Built so far: <b>'+Number(built).toLocaleString()+' m²</b><br>';
+  if(rem>0) html+='<br><span style="background:#f46d43;color:#fff;padding:2px 9px;border-radius:11px;font-weight:600;">✨ '+Number(rem).toLocaleString()+' m² still to build</span>';
+  else html+='<br><span style="background:#1a9850;color:#fff;padding:2px 9px;border-radius:11px;font-weight:600;">✅ Fully built out</span>';
+  let pop=document.getElementById('storyPopup');
+  if(!pop){ pop=document.createElement('div'); pop.id='storyPopup'; document.body.appendChild(pop); }
+  pop.style.cssText='position:fixed;z-index:9998;background:'+bg+';border:1px solid '+bd+';border-left:5px solid '+base+';border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:13px 15px;font-size:12.5px;line-height:1.6;color:#1a2b3c;max-width:285px;';
+  pop.innerHTML='<span id="popX" style="position:absolute;top:6px;right:10px;cursor:pointer;color:#888;font-size:15px;">&times;</span>'+html;
+  pop.style.display='block';
+  const x=(evt&&evt.clientX)?evt.clientX:window.innerWidth/2, y=(evt&&evt.clientY)?evt.clientY:window.innerHeight/2;
+  let left=x+14; if(left+295>window.innerWidth) left=x-295;
+  let top=y+14; if(top+200>window.innerHeight) top=y-200;
+  pop.style.left=Math.max(8,left)+'px'; pop.style.top=Math.max(8,top)+'px';
+  document.getElementById('popX').onclick=function(){
+    pop.style.display='none';
+    // also clear the red search/click highlight ring + the search box
+    if(highlightId!=null){
+      highlightId=null;
+      var si=document.getElementById('plotSearch');
+      if(si){ si.value=''; var sc=document.getElementById('searchClear'); if(sc) sc.style.display='none'; }
+      render();
+    }
+  };
+}
+
+function buildChapters(){
+  const cont=document.getElementById('chapters');
+  chapters.forEach(function(ch,i){
+    const div=document.createElement('div');
+    div.className='chapter'+(i===0?' active':'');
+    div.innerHTML='<div class="num">'+ch.num+'</div><h3>'+ch.title+'</h3><p>'+ch.text+'</p>';
+    div.onclick=function(){
+      activeChapter=i;
+      document.querySelectorAll('.chapter').forEach(function(c){c.classList.remove('active');});
+      div.classList.add('active');
+      render();
+    };
+    cont.appendChild(div);
+  });
+}
+function buildFootnote(){
+  document.getElementById('footnote').innerHTML=
+    '💡 <b>The bottom line for us as developers:</b> roughly <span class="big-num">'+Math.round(totalRem/1000).toLocaleString()+'k m²</span> of buildable area is still unbuilt across our land &mdash; that\'s our pipeline of future homes, shops and offices. So far '+Math.round(totalBuilt/1000).toLocaleString()+'k m² has been built. The biggest opportunities (Chapter 4) are where we focus to turn land into new development.';
+}
+
+buildChapters();
+buildFootnote();
+function setupSearch(){
+  var input=document.getElementById('plotSearch');
+  var resultsBox=document.getElementById('searchResults');
+  var clearBtn=document.getElementById('searchClear');
+
+  function doSearch(q){
+    q=(q||'').trim().toLowerCase();
+    clearBtn.style.display = q ? 'block' : 'none';
+    if(!q){ resultsBox.style.display='none'; return; }
+    // score each plot for relevance:
+    //  3 = id or description STARTS with query
+    //  2 = a WORD inside description starts with query
+    //  1 = query appears somewhere
+    //  0 = no match
+    function score(p){
+      var id=String(p.id).toLowerCase();
+      var desc=(p.desc||'').toLowerCase();
+      if(id.indexOf(q)===0 || desc.indexOf(q)===0) return 3;
+      var words=desc.split(/[^a-z0-9]+/);
+      for(var i=0;i<words.length;i++){ if(words[i].indexOf(q)===0) return 2; }
+      if(id.indexOf(q)>=0 || desc.indexOf(q)>=0) return 1;
+      return 0;
+    }
+    var scored=[];
+    data.forEach(function(p){ var s=score(p); if(s>0) scored.push({p:p,s:s}); });
+    // sort by score desc, then shorter description first (more specific), then alphabetical
+    scored.sort(function(a,b){
+      if(b.s!==a.s) return b.s-a.s;
+      if(a.p.desc.length!==b.p.desc.length) return a.p.desc.length-b.p.desc.length;
+      return a.p.desc.localeCompare(b.p.desc);
+    });
+    var matches=scored.slice(0,12).map(function(x){return x.p;});
+    if(!matches.length){
+      resultsBox.innerHTML='<div style="padding:9px 12px;font-size:12px;color:#9aa7b4;">No plot found</div>';
+      resultsBox.style.display='block'; return;
+    }
+    var html='';
+    matches.forEach(function(p){
+      html+='<div class="searchRow" data-id="'+p.id+'" style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f3f6;">'+
+            '<b style="color:#1a2b3c;">'+p.desc+'</b><br>'+
+            '<span style="color:#8a97a4;font-size:11px;">Plot '+p.id+' &middot; '+p.lu+' &middot; '+Number(p.gfa).toLocaleString()+' m²</span></div>';
+    });
+    resultsBox.innerHTML=html;
+    resultsBox.style.display='block';
+    Array.prototype.forEach.call(resultsBox.querySelectorAll('.searchRow'), function(row){
+      row.onmouseover=function(){ row.style.background='#f2f7fc'; };
+      row.onmouseout=function(){ row.style.background='#fff'; };
+      row.onclick=function(){ selectPlot(row.getAttribute('data-id')); };
+    });
+  }
+
+  function selectPlot(id){
+    highlightId=id;
+    resultsBox.style.display='none';
+    var p=data.filter(function(x){return String(x.id)===String(id);})[0];
+    if(p) input.value=p.desc;
+    render();
+    // open the popup for the found plot, centred
+    if(p){
+      var cd=[p.id,p.desc,p.pa,p.built,p.rem,p.far,p.lu,p.gfa,p.sec,p.val];
+      showPopup(cd, null);
+    }
+  }
+
+  input.addEventListener('input', function(){
+    if(!input.value.trim() && highlightId!=null){ highlightId=null; render(); }
+    doSearch(input.value);
+  });
+  input.addEventListener('focus', function(){ if(input.value.trim()) doSearch(input.value); });
+  clearBtn.onclick=function(){ input.value=''; highlightId=null; resultsBox.style.display='none'; clearBtn.style.display='none'; render(); };
+  document.addEventListener('click', function(e){
+    if(!document.getElementById('searchWrap').contains(e.target)) resultsBox.style.display='none';
+  });
+}
+
+function setupZones(){
+  var zlist=[]; data.forEach(function(p){ if(p.zone && zlist.indexOf(p.zone)<0) zlist.push(p.zone); });
+  zlist.sort(function(a,b){ return (parseInt(a)||999)-(parseInt(b)||999); });
+  var box=document.getElementById('zoneChecks');
+  var html='';
+  zlist.forEach(function(z){
+    html+='<label style="display:flex;align-items:center;gap:6px;padding:3px 4px;cursor:pointer;font-size:12px;">'+
+      '<input type="checkbox" class="zoneChk" value="'+z+'"> '+
+      '<span style="width:12px;height:12px;border-radius:3px;background:'+zoneColor(z)+';display:inline-block;"></span> Zone '+z+'</label>';
+  });
+  box.innerHTML=html;
+  var btn=document.getElementById('zoneBtn');
+  var panel=document.getElementById('zonePanel');
+  btn.onclick=function(e){ e.stopPropagation(); panel.style.display = panel.style.display==='none'?'block':'none'; };
+  document.addEventListener('click', function(e){
+    if(panel.style.display==='block' && !panel.contains(e.target) && e.target!==btn) panel.style.display='none';
+  });
+  function updateBtn(){
+    var sel=getSelectedZones();
+    btn.textContent = sel.length ? ('📍 '+sel.length+' zone'+(sel.length>1?'s':'')+' ▾') : '📍 Highlight zones ▾';
+  }
+  box.addEventListener('change', function(e){
+    if(e.target.classList.contains('zoneChk')){
+      selectedZones[e.target.value]=e.target.checked;
+      updateBtn(); render();
+    }
+  });
+  document.getElementById('zoneClearAll').addEventListener('change', function(){
+    if(this.checked){
+      document.querySelectorAll('.zoneChk').forEach(function(cb){ cb.checked=false; });
+      selectedZones={}; this.checked=false; updateBtn(); render();
+    }
+  });
+}
+
+function start(){ document.getElementById('status').style.display='none'; document.getElementById('chart').style.display='block'; render(); setupSearch(); setupLabelToggle(); setupZones(); document.getElementById('chart').on('plotly_click', function(d){ var pt=d.points[0]; if(pt&&pt.customdata){ var cd=pt.customdata; showPopup(cd,d.event); highlightId=cd[0]; render(); } }); }
+
+function setupLabelToggle(){
+  var wrap=document.getElementById('labelToggleWrap');
+  var sw=document.getElementById('labelToggleSwitch');
+  var knob=document.getElementById('labelToggleKnob');
+  wrap.onclick=function(){
+    showLabels=!showLabels;
+    sw.style.background = showLabels ? '#005baa' : '#cbd5de';
+    knob.style.left = showLabels ? '18px' : '2px';
+    render();
+  };
+}
+if (typeof Plotly !== 'undefined') start();
+else { var iv=setInterval(function(){ if(typeof Plotly!=='undefined'){clearInterval(iv);start();} },100); }
+</script>
+</body>
+</html>
